@@ -60,11 +60,20 @@ const Stockitems = [
 ]
 const proditems = [
   {
-    title: "Production Data",
-    url: "/production",
+    title: "Add Production",
+    url: "/production/add",
+    icon: Factory,
+  },
+  {
+    title: "Preview Data",
+    url: "/production/preview",
     icon: DatabaseBackup,
   },
-
+  {
+    title: "Analysis",
+    url: "/production/analysis",
+    icon: BarChart3,
+  },
 ]
 
 export function AppSidebar() {
