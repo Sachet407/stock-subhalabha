@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, SubmitHandler } from "react-hook-form";
@@ -26,10 +26,14 @@ const numericSchema = z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number().min(0, { message: "Value must be >= 0" })
 );
-
+async function fetchOpeningBalance(date: string) {
+    const res = await fetch(`/api/unfinished-goods/opening-balance?date=${date}`);
+    const data = await res.json();
+    return data.opening_Balance;
+}
 const formSchema = z.object({
     date: z.string().min(1, { message: "Date is required" }),
-    opening_Balance: numericSchema,
+    opening_Balance: numericSchema.optional(),
     received: numericSchema.optional().default(0),
     finished_meter: numericSchema.optional().default(0),
     finished_kg: numericSchema.optional().default(0),
@@ -40,28 +44,62 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface FormDialogProps {
     initialData?: UnfinishedGoods;
-    latestBalance?: number;
     onSuccess: () => void;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-export function UnfinishedGoodsFormDialog({ initialData, latestBalance, onSuccess, open, onOpenChange }: FormDialogProps) {
+export function UnfinishedGoodsFormDialog({ initialData, onSuccess, open, onOpenChange }: FormDialogProps) {
     const [errorModal, setErrorModal] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
     const todayDate = getTodayBSDate();
-
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAutoOpeningBalance, setIsAutoOpeningBalance] = useState(false);
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
             date: todayDate,
-            opening_Balance: latestBalance ?? undefined,
+            opening_Balance: undefined,
             received: undefined,
             finished_meter: undefined,
             finished_kg: undefined,
         },
     });
 
+    const watchedDate = form.watch("date");
 
+    useEffect(() => {
+        if (!open) return;
+        if (initialData) return; // editing mode
+        if (!watchedDate) return;
+
+        let cancelled = false;
+
+        const loadOpeningBalance = async () => {
+            try {
+                const ob = await fetchOpeningBalance(watchedDate);
+                console.log("Opening Balance", ob);
+                if (!cancelled && typeof ob === "number") {
+                    form.setValue("opening_Balance", ob, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                    });
+                    setIsAutoOpeningBalance(true); // 🔒 auto
+                } else {
+                    // 👇 no previous balance → allow manual entry
+                    form.setValue("opening_Balance", undefined);
+                    setIsAutoOpeningBalance(false); // ✍️ manual
+                }
+            } catch (err) {
+                console.error("Failed to fetch opening balance", err);
+            }
+        };
+
+        loadOpeningBalance();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [watchedDate, open, initialData, form]);
     useEffect(() => {
         if (open) {
             if (initialData) {
@@ -75,7 +113,7 @@ export function UnfinishedGoodsFormDialog({ initialData, latestBalance, onSucces
             } else {
                 form.reset({
                     date: todayDate,
-                    opening_Balance: latestBalance,
+                    // opening_Balance: latestBalance,
                     received: undefined,
                     finished_meter: undefined,
                     finished_kg: undefined,
@@ -83,9 +121,33 @@ export function UnfinishedGoodsFormDialog({ initialData, latestBalance, onSucces
 
             }
         }
-    }, [initialData, latestBalance, form, open, todayDate]);
+    }, [initialData, form, open, todayDate]);
 
     const onSubmit: SubmitHandler<FormValues> = async (values) => {
+        if (isSubmitting) return;
+        if (!initialData) {
+            if (
+                values.received === undefined ||
+                values.finished_meter === undefined ||
+                values.finished_kg === undefined
+            ) {
+                setErrorModal({
+                    open: true,
+                    message: "Please enter all the values.",
+                });
+                return;
+            }
+        }
+
+        if (!initialData && values.opening_Balance === undefined) {
+            setErrorModal({
+                open: true,
+                message:
+                    "Opening Balance is required for this date because no previous stock was found."
+            });
+            setIsSubmitting(false);
+            return;
+        }
         try {
             const ob = values.opening_Balance ?? 0;
             const rec = values.received ?? 0;
@@ -164,7 +226,7 @@ export function UnfinishedGoodsFormDialog({ initialData, latestBalance, onSucces
                                                     placeholder="Enter opening balance"
                                                     value={field.value ?? ""}
                                                     onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))}
-                                                    disabled={!!initialData || (latestBalance !== undefined && !initialData)}
+                                                    disabled={!!initialData || isAutoOpeningBalance}
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -234,8 +296,12 @@ export function UnfinishedGoodsFormDialog({ initialData, latestBalance, onSucces
                             </div>
 
                             <DialogFooter className="pt-4">
-                                <Button type="submit" className="w-full">
-                                    {initialData ? "Update Entry" : "Save Entry"}
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    {isSubmitting
+                                        ? "Saving..."
+                                        : initialData
+                                            ? "Update Entry"
+                                            : "Save Entry"}
                                 </Button>
                             </DialogFooter>
                         </form>

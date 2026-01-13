@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/data-table"
 import { getUnfinishedGoodsColumns } from "./unfinished-goods-columns"
-import { fetchUnfinishedGoodsList,deleteUnfinishedGoods } from "@/lib/unfinishedGoods"
+import { fetchUnfinishedGoodsList, deleteUnfinishedGoods } from "@/lib/unfinishedGoods"
 import { UnfinishedGoodsFormDialog } from "./Unfinished-goodsFormDialog"
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog"
 import { UnfinishedGoods } from "@/lib/unfinishedGoods"
@@ -130,11 +130,7 @@ export default function UnfinishedGoodsStockPage() {
     })
   }, [data, selectedYear, selectedMonth])
 
-  const latestBalance = useMemo(() => {
-    if (!data.length) return undefined
-    const sorted = [...data].sort((a, b) => b.date.localeCompare(a.date))
-    return sorted[0].balance
-  }, [data])
+
 
   const exportToCSV = () => {
     if (!filteredData.length) return
@@ -207,14 +203,14 @@ export default function UnfinishedGoodsStockPage() {
     doc.save(`Unfinished-Goods_stock_report_${selectedYear}_${selectedMonth}.pdf`);
   }
 
-  const columns = getUnfinishedGoodsColumns(handleEdit, ( UnfinishedGoods: UnfinishedGoods) => setDeleteId( UnfinishedGoods._id))
+  const columns = getUnfinishedGoodsColumns(handleEdit, (UnfinishedGoods: UnfinishedGoods) => setDeleteId(UnfinishedGoods._id))
 
   return (
-    <div className="container mx-auto py-8 px-2 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-500">
+    <div className="container mx-auto py-1 px-2 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-linear-to-br from-muted/50 to-muted/20 p-8 rounded-2xl border border-border/40 shadow-sm relative overflow-hidden">
         <div className="relative z-10 space-y-2">
           <h1 className="text-4xl font-light tracking-tight text-primary sm:text-3xl">Unfinished Goods</h1>
-     
+
         </div>
 
         <div className="flex flex-col md:flex-row flex-wrap gap-4 items-stretch md:items-end w-full xl:w-auto relative z-10">
@@ -310,7 +306,7 @@ export default function UnfinishedGoodsStockPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         initialData={selectedUnfinishedGoods}
-        latestBalance={latestBalance}
+
         onSuccess={loadData}
       />
 

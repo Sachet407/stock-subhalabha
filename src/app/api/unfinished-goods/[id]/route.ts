@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import UnfinishedGoodsModel from "@/model/UnfinishedGoods";
 import { NextRequest } from "next/server";
+import { recalculateFromDateUnfinished } from "@/lib/unfinishedRecalculate";
 
 const cleanNumber = (num: number) =>
   Number.parseFloat(num.toPrecision(12));
@@ -38,7 +39,7 @@ export async function PUT(
       },
       { new: true }
     ).exec();
-
+    await recalculateFromDateUnfinished(date);
     if (!updated) {
       return Response.json(
         { success: false, message: "Entry not found" },
@@ -69,13 +70,15 @@ export async function DELETE(
     const { id } = await context.params;
 
     const deleted = await UnfinishedGoodsModel.findByIdAndDelete(id).exec();
-
+    console.log("Deleted entry:", deleted);
     if (!deleted) {
       return Response.json(
         { success: false, message: "Entry not found" },
         { status: 404 }
       );
     }
+
+    await recalculateFromDateUnfinished(deleted.date);
 
     return Response.json(
       { success: true, message: "Entry deleted successfully" },

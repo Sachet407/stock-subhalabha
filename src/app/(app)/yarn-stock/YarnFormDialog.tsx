@@ -36,7 +36,7 @@ async function fetchOpeningBalance(date: string) {
 
 const formSchema = z.object({
     date: z.string().min(1, { message: "Date is required" }),
-    opening_Balance: numericSchema,
+    opening_Balance: numericSchema.optional(),
     purchase: numericSchema.optional().default(0),
     consumption: numericSchema.optional().default(0),
     wastage: numericSchema.optional().default(0),
@@ -52,16 +52,17 @@ type YarnFormValues = {
 
 interface YarnFormDialogProps {
     initialData?: Yarn;
-    latestBalance?: number;
+
     onSuccess: () => void;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, onOpenChange }: YarnFormDialogProps) {
+export function YarnFormDialog({ initialData, onSuccess, open, onOpenChange }: YarnFormDialogProps) {
     const [errorModal, setErrorModal] = useState<{ open: boolean, message: string }>({ open: false, message: "" });
     const todayDate = getTodayBSDate();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAutoOpeningBalance, setIsAutoOpeningBalance] = useState(false);
     const form = useForm<YarnFormValues>({
         // @ts-ignore - zodResolver might complain about the optional fields mismatch but we handle it in onSubmit
         resolver: zodResolver(formSchema),
@@ -74,10 +75,13 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
         },
     });
 
+
+
     const watchedDate = form.watch("date");
 
     useEffect(() => {
-        if (!open || initialData) return;
+        if (!open) return;
+        if (initialData) return; // editing mode
         if (!watchedDate) return;
 
         let cancelled = false;
@@ -85,12 +89,17 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
         const loadOpeningBalance = async () => {
             try {
                 const ob = await fetchOpeningBalance(watchedDate);
-
+                console.log("Opening Balance", ob);
                 if (!cancelled && typeof ob === "number") {
                     form.setValue("opening_Balance", ob, {
                         shouldDirty: true,
                         shouldValidate: true,
                     });
+                    setIsAutoOpeningBalance(true); // 🔒 auto
+                } else {
+                    // 👇 no previous balance → allow manual entry
+                    form.setValue("opening_Balance", undefined);
+                    setIsAutoOpeningBalance(false); // ✍️ manual
                 }
             } catch (err) {
                 console.error("Failed to fetch opening balance", err);
@@ -120,7 +129,7 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
             } else {
                 form.reset({
                     date: todayDate,
-                    opening_Balance: latestBalance,
+                    // opening_Balance: latestBalance,
                     purchase: undefined,
                     consumption: undefined,
                     wastage: undefined,
@@ -133,6 +142,32 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
 
     const onSubmit: SubmitHandler<YarnFormValues> = async (values) => {
         if (isSubmitting) return;
+
+        const { dirtyFields } = form.formState;
+
+        const allManuallyEntered =
+            dirtyFields.purchase &&
+            dirtyFields.consumption &&
+            dirtyFields.wastage;
+
+        if (!allManuallyEntered) {
+            setErrorModal({
+                open: true,
+                message:
+                    "Please enter all the values.",
+            });
+            setIsSubmitting(false);
+            return;
+        }
+        if (!initialData && values.opening_Balance === undefined) {
+            setErrorModal({
+                open: true,
+                message:
+                    "Opening Balance is required for this date because no previous stock was found."
+            });
+            setIsSubmitting(false);
+            return;
+        }
         try {
             setIsSubmitting(true);
             const ob = values.opening_Balance ?? 0;
@@ -216,7 +251,7 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
                                                     placeholder="Enter opening balance"
                                                     value={field.value === undefined || field.value === null ? "" : field.value}
                                                     onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))}
-                                                    disabled={!!initialData || (latestBalance !== undefined && !initialData)}
+                                                    disabled={!!initialData || isAutoOpeningBalance}
                                                 />
                                             </FormControl>
                                             <FormMessage />

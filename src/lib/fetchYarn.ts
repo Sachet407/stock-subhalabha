@@ -23,7 +23,7 @@ export async function createYarn(data: Omit<Yarn, '_id' | 'total' | 'balance'>):
         body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!json.success) throw new Error('Failed to create yarn');
+    if (!json.success) throw new Error('Failed to create yarn.Check for duplicate entry.');
     return json.data as Yarn;
 }
 

@@ -130,11 +130,7 @@ export default function YarnStockPage() {
     })
   }, [data, selectedYear, selectedMonth])
 
-  const latestBalance = useMemo(() => {
-    if (!data.length) return undefined
-    const sorted = [...data].sort((a, b) => b.date.localeCompare(a.date))
-    return sorted[0].balance
-  }, [data])
+
 
   const exportToCSV = () => {
     if (!filteredData.length) return
@@ -310,7 +306,6 @@ export default function YarnStockPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         initialData={selectedYarn}
-        latestBalance={latestBalance}
         onSuccess={loadData}
       />
 

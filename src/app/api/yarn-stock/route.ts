@@ -17,6 +17,17 @@ export async function POST(request: Request) {
             wastage = 0,
         } = await request.json();
 
+        const existing = await YarnModel.findOne({ date }).lean();
+        if (existing) {
+            return Response.json(
+                {
+                    success: false,
+                    message: `Entry for date ${date} already exists. Please edit it instead.`,
+                },
+                { status: 409 }
+            );
+        }
+
         // 1️⃣ Find the latest previous entry by BS date
         const previous = await YarnModel.findOne({
             date: { $lt: date }
@@ -75,7 +86,7 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error("Yarn create error:", error);
         return Response.json(
-            { success: false, message: "Failed to create yarn entry" },
+            { success: false, message: "Failed to create yarn entry.Check for duplicate entry." },
             { status: 500 }
         );
     }

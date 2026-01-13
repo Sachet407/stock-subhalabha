@@ -26,13 +26,18 @@ export function getUnfinishedGoodsColumns(
         },
         {
             accessorKey: "opening_Balance",
-            header: "Opening Bal.",
+            header: "Opening Bal.(kg)",
             cell: ({ row }) => <span className="text-muted-foreground">{cleanNumber(row.getValue("opening_Balance")).toLocaleString()}</span>
         },
         {
             accessorKey: "received",
-            header: "Received",
+            header: "Received(kg)",
             cell: ({ row }) => <span className="text-emerald-500 font-medium">+{cleanNumber(row.getValue("received")).toLocaleString()}</span>
+        },
+        {
+            accessorKey: "total",
+            header: "Total Stock(Kg)",
+            cell: ({ row }) => <span className="font-bold text-primary">{cleanNumber(row.getValue("total")).toLocaleString()}</span>
         },
         {
             accessorKey: "finished_meter",
@@ -44,14 +49,10 @@ export function getUnfinishedGoodsColumns(
             header: "Finished (Kg)",
             cell: ({ row }) => <span className="text-amber-500 font-medium">-{cleanNumber(row.getValue("finished_kg")).toLocaleString()}</span>
         },
-        {
-            accessorKey: "total",
-            header: "Total Stock",
-            cell: ({ row }) => <span className="font-bold text-primary">{cleanNumber(row.getValue("total")).toLocaleString()}</span>
-        },
+
         {
             accessorKey: "balance",
-            header: "Closing Bal.",
+            header: "Remaining Bal.",
             cell: ({ row }) => (
                 <div className="bg-primary/5 py-1 px-3 rounded-full border border-primary/10 inline-block">
                     <span className="font-extrabold text-primary">{cleanNumber(row.getValue("balance")).toLocaleString()}</span>

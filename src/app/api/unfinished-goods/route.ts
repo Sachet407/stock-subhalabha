@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import UnfinishedGoodsModel from "@/model/UnfinishedGoods";
-
+import { recalculateFromDateUnfinished } from "@/lib/unfinishedRecalculate";
 const cleanNumber = (num: number) =>
   Number.parseFloat(num.toPrecision(12));
 
@@ -16,19 +16,52 @@ export async function POST(request: Request) {
       finished_kg,
     } = await request.json();
 
-    const total = cleanNumber(opening_Balance + received);
+    const existing = await UnfinishedGoodsModel.findOne({ date });
+    if (existing) {
+      return Response.json(
+        {
+          success: false,
+          message: `Entry for ${date} already exists.`,
+        },
+        { status: 409 }
+      );
+    }
+    const previous = await UnfinishedGoodsModel.findOne({
+      date: { $lt: date },
+    }).sort({ date: -1 });
+
+    let finalOpeningBalance: number;
+
+    if (!previous) {
+      // First-ever entry → opening balance required
+      if (opening_Balance === undefined || opening_Balance === null) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "Opening balance is required for the first Unfinished Goods entry.",
+          },
+          { status: 400 }
+        );
+      }
+      finalOpeningBalance = cleanNumber(opening_Balance);
+    } else {
+      // Auto carry-forward
+      finalOpeningBalance = cleanNumber(previous.balance);
+    }
+    const total = cleanNumber(finalOpeningBalance + received);
     const balance = cleanNumber(total - finished_kg);
 
     const entry = await UnfinishedGoodsModel.create({
       date,
-      opening_Balance: cleanNumber(opening_Balance),
+      opening_Balance: cleanNumber(finalOpeningBalance),
       received: cleanNumber(received),
       total,
       finished_meter: cleanNumber(finished_meter),
       finished_kg: cleanNumber(finished_kg),
       balance,
     });
-
+    await recalculateFromDateUnfinished(date);
     return Response.json(
       { success: true, data: entry },
       { status: 201 }
@@ -47,7 +80,7 @@ export async function GET() {
 
   try {
     const entries = await UnfinishedGoodsModel.find()
-      .sort({ createdAt: -1 })
+      .sort({ date: -1 })
       .exec();
 
     return Response.json(
