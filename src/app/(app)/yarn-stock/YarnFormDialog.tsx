@@ -27,6 +27,12 @@ const numericSchema = z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number().min(0, { message: "Value must be >= 0" })
 );
+async function fetchOpeningBalance(date: string) {
+    const res = await fetch(`/api/yarn-stock/opening-balance?date=${date}`);
+    const data = await res.json();
+    return data.opening_Balance;
+}
+
 
 const formSchema = z.object({
     date: z.string().min(1, { message: "Date is required" }),
@@ -56,7 +62,6 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
     const [errorModal, setErrorModal] = useState<{ open: boolean, message: string }>({ open: false, message: "" });
     const todayDate = getTodayBSDate();
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     const form = useForm<YarnFormValues>({
         // @ts-ignore - zodResolver might complain about the optional fields mismatch but we handle it in onSubmit
         resolver: zodResolver(formSchema),
@@ -68,6 +73,39 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
             wastage: undefined,
         },
     });
+
+    const watchedDate = form.watch("date");
+
+    useEffect(() => {
+        if (!open || initialData) return;
+        if (!watchedDate) return;
+
+        let cancelled = false;
+
+        const loadOpeningBalance = async () => {
+            try {
+                const ob = await fetchOpeningBalance(watchedDate);
+
+                if (!cancelled && typeof ob === "number") {
+                    form.setValue("opening_Balance", ob, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch opening balance", err);
+            }
+        };
+
+        loadOpeningBalance();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [watchedDate, open, initialData, form]);
+
+
+
 
     useEffect(() => {
         if (open) {
@@ -89,7 +127,9 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
                 });
             }
         }
-    }, [initialData, latestBalance, form, open, todayDate]);
+    }, [initialData, form, open, todayDate]);
+
+
 
     const onSubmit: SubmitHandler<YarnFormValues> = async (values) => {
         if (isSubmitting) return;
@@ -108,6 +148,7 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
                     open: true,
                     message: `Invalid Entry: Balance would become negative (${balance}). Total stock (${total}) is less than Consumption + Wastage (${con + was}).`
                 });
+                setIsSubmitting(false);
                 return;
             }
 
@@ -125,9 +166,11 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
                 await createYarn(payload as any);
             }
             onSuccess();
+            setIsSubmitting(false);
             onOpenChange(false);
         } catch (error: any) {
             setErrorModal({ open: true, message: error.message || "An unexpected error occurred." });
+            setIsSubmitting(false);
         }
     };
 

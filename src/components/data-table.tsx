@@ -41,7 +41,7 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: 5,
       }
     }
   })
@@ -56,7 +56,7 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id} className="hover:bg-transparent border-0">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="h-14 px-6 text-left align-middle font-bold text-primary/70 uppercase tracking-widest text-[10px]">
+                    <TableHead key={header.id} className="h-14 px-6 text-left align-middle font-bold text-primary/70 uppercase tracking-widest text-[11px]">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -113,7 +113,7 @@ export function DataTable<TData, TValue>({
                 <SelectValue placeholder={table.getState().pagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top" className="min-w-[80px] rounded-xl shadow-xl">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
+                {[5,10, 20, 30, 40, 50].map((pageSize) => (
                   <SelectItem key={pageSize} value={`${pageSize}`} className="cursor-pointer rounded-lg mx-1 my-0.5">
                     {pageSize}
                   </SelectItem>

@@ -210,8 +210,8 @@ export default function YarnStockPage() {
   const columns = getYarnColumns(handleEdit, (yarn: Yarn) => setDeleteId(yarn._id))
 
   return (
-    <div className="container mx-auto py-8 px-2 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col xl:flex-row justify-between items-center xl:items-center gap-6 bg-linear-to-br from-muted/50 to-muted/20 p-8 rounded-2xl border border-border/40 shadow-sm relative overflow-hidden">
+    <div className="container mx-auto py-1 px-2 sm:px-3 lg:px-4 space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col xl:flex-row justify-between items-center xl:items-center gap-6 bg-linear-to-br from-muted/50 to-muted/20 p-6 rounded-2xl border border-border/40 shadow-sm relative overflow-hidden">
         <div className="relative z-10 space-y-2">
           <h1 className="text-4xl font-light tracking-tight text-primary sm:text-3xl">Yarn Stock</h1>
 

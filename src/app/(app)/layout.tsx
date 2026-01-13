@@ -46,7 +46,7 @@ export default async function RootLayout({
             <AppSidebar />
             <div className="flex flex-1 flex-col overflow-hidden min-h-screen">
               <SiteHeader />
-              <main className="flex-1 overflow-auto p-6 lg:p-10 bg-muted/20">
+              <main className="flex-1 overflow-auto p-2 lg:p-3 bg-muted/20">
                 {children}
               </main>
             </div>

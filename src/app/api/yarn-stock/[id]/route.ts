@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import YarnModel from "@/model/Yarn";
+import { recalculateFromDate } from "@/lib/yarnRecalculate";
 
 const cleanNumber = (num: number) =>
     Number.parseFloat(num.toPrecision(12));
@@ -43,7 +44,7 @@ export async function PUT(
             },
             { new: true }
         ).exec();
-
+        await recalculateFromDate(date);
         if (!updatedYarn) {
             return Response.json(
                 { success: false, message: "Yarn not found" },
@@ -65,31 +66,40 @@ export async function PUT(
 }
 
 export async function DELETE(
-    _request: Request,
-    { params }: { params: Promise<{ id: string }> }
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params;
-    await dbConnect();
+  const { id } = await params;
+  await dbConnect();
 
-    try {
-        const deletedYarn = await YarnModel.findByIdAndDelete(id).exec();
+  try {
+    // 1️⃣ Find first (we need the date)
+    const yarn = await YarnModel.findById(id).exec();
 
-        if (!deletedYarn) {
-            return Response.json(
-                { success: false, message: "Yarn not found" },
-                { status: 404 }
-            );
-        }
-
-        return Response.json(
-            { success: true, message: "Yarn deleted successfully" },
-            { status: 200 }
-        );
-    } catch (error) {
-        console.error("Yarn delete error:", error);
-        return Response.json(
-            { success: false, message: "Failed to delete yarn" },
-            { status: 500 }
-        );
+    if (!yarn) {
+      return Response.json(
+        { success: false, message: "Yarn not found" },
+        { status: 404 }
+      );
     }
+
+    const deletedDate = yarn.date;
+
+    // 2️⃣ Delete
+    await YarnModel.findByIdAndDelete(id).exec();
+
+    // 3️⃣ Recalculate from deleted date
+    await recalculateFromDate(deletedDate);
+
+    return Response.json(
+      { success: true, message: "Yarn deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Yarn delete error:", error);
+    return Response.json(
+      { success: false, message: "Failed to delete yarn" },
+      { status: 500 }
+    );
+  }
 }
