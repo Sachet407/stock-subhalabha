@@ -1,16 +1,19 @@
 import dbConnect from "@/lib/dbConnect";
 import UnfinishedGoodsModel from "@/model/UnfinishedGoods";
+import { NextRequest } from "next/server";
 
 const cleanNumber = (num: number) =>
   Number.parseFloat(num.toPrecision(12));
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   await dbConnect();
 
   try {
+    const { id } = await context.params;
+
     const {
       date,
       opening_Balance,
@@ -23,7 +26,7 @@ export async function PUT(
     const balance = cleanNumber(total - finished_kg);
 
     const updated = await UnfinishedGoodsModel.findByIdAndUpdate(
-      params.id,
+      id,
       {
         date,
         opening_Balance: cleanNumber(opening_Balance),
@@ -55,14 +58,17 @@ export async function PUT(
     );
   }
 }
+
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   await dbConnect();
 
   try {
-    const deleted = await UnfinishedGoodsModel.findByIdAndDelete(params.id).exec();
+    const { id } = await context.params;
+
+    const deleted = await UnfinishedGoodsModel.findByIdAndDelete(id).exec();
 
     if (!deleted) {
       return Response.json(
