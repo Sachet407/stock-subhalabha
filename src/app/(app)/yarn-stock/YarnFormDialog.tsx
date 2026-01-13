@@ -21,6 +21,7 @@ import { createYarn, updateYarn } from "@/lib/fetchYarn";
 import { Yarn } from "@/lib/fetchYarn";
 import { AlertCircle } from "lucide-react";
 
+
 // Custom preprocessor to handle blank strings as undefined for numeric fields
 const numericSchema = z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -54,6 +55,7 @@ interface YarnFormDialogProps {
 export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, onOpenChange }: YarnFormDialogProps) {
     const [errorModal, setErrorModal] = useState<{ open: boolean, message: string }>({ open: false, message: "" });
     const todayDate = getTodayBSDate();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<YarnFormValues>({
         // @ts-ignore - zodResolver might complain about the optional fields mismatch but we handle it in onSubmit
@@ -90,7 +92,9 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
     }, [initialData, latestBalance, form, open, todayDate]);
 
     const onSubmit: SubmitHandler<YarnFormValues> = async (values) => {
+        if (isSubmitting) return;
         try {
+            setIsSubmitting(true);
             const ob = values.opening_Balance ?? 0;
             const pur = values.purchase ?? 0;
             const con = values.consumption ?? 0;
@@ -239,8 +243,12 @@ export function YarnFormDialog({ initialData, latestBalance, onSuccess, open, on
                             </div>
 
                             <DialogFooter className="pt-4">
-                                <Button type="submit" className="w-full">
-                                    {initialData ? "Update Entry" : "Save Entry"}
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    {isSubmitting
+                                        ? "Saving..."
+                                        : initialData
+                                            ? "Update Entry"
+                                            : "Save Entry"}
                                 </Button>
                             </DialogFooter>
                         </form>
